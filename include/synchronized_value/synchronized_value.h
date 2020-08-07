@@ -90,22 +90,11 @@ public:
     explicit synchronized_value(T value)
             : value_(std::forward<T>(value))
     {}
-
-    synchronized_value(synchronized_value &&other)
-            : value_(std::move(other.value_)),
-              mutex_(std::move(other.mutex_))
-    {}
-
-    synchronized_value &operator=(synchronized_value &&other)
-    {
-        value_ = std::move(other.value_);
-        mutex_ = std::move(other.mutex_);
-
-        return *this;
-    }
-
     synchronized_value(const synchronized_value &) = delete;
     synchronized_value &operator=(const synchronized_value &) = delete;
+
+    synchronized_value(synchronized_value &&other) = delete;
+    synchronized_value &operator=(synchronized_value &&other) = delete;
 
     xlock_t operator*()
     { return {value_, mutex_}; }
@@ -122,21 +111,10 @@ public:
     value_type &value()
     { return value_; }
 
-    const value_type value() const
+    const value_type& value() const
     { return value_; }
 
 private:
     value_type value_;
     mutable mutex_type mutex_;
 };
-
-
-// this does not work
-template<typename T, typename ... R, typename Mutex = std::mutex,
-        typename =
-        std::enable_if_t<std::is_constructible<T, R...>::value ||
-                         is_aggregate_constructable<T, R...>()>>
-synchronized_value<T, Mutex> make_synch_value(R &&... args)
-{
-    return {T(std::forward<R>(args)...)};
-}
