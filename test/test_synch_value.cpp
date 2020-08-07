@@ -1,5 +1,4 @@
 ﻿
-#include "synchronized_value/synchronized_value.h"
 
 #include "run_check.h"
 
@@ -11,6 +10,7 @@
 
 template <typename T1, typename T2>
 constexpr bool is_same_v = std::is_same<T1, T2>::value;
+
 
 int main(int argc, const char **argv)
 {
@@ -87,13 +87,14 @@ int main(int argc, const char **argv)
     std::mt19937 rng(rd());
     std::uniform_int_distribution<int64_t> dist(-69800, 385697);
 
+    std::vector<Wrapped> input(1000, {dummy});
     std::vector<std::future<bool>> results;
 
     for (size_t i = 0; i != 1000; ++i)
     {
         results.push_back(std::async(std::launch::async,
-                &run_check,
-                std::ref((Dummy&)*dummy),
+                &run_check_w,
+                std::ref(input[i]),
                 dist(rng),
                 intervals));
     }

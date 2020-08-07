@@ -3,20 +3,26 @@
 #include <mutex>
 #include <type_traits>
 
-template <typename ...>
+template<typename ...>
 using void_t = void;
 
-template <typename T, typename Tuple, typename = void_t<>>
-struct is_aggregate_constructable_ : std::false_type {};
+template<typename T, typename Tuple, typename = void_t<>>
+struct is_aggregate_constructable_ : std::false_type
+{
+};
 
-template <typename T, typename ... Args>
+template<typename T, typename ... Args>
 struct is_aggregate_constructable_<T,
         std::tuple<Args...>,
-        void_t<decltype(T{Args()...})>> : std::true_type {};
+        void_t<decltype(T{Args()...})>> : std::true_type
+{
+};
 
-template <typename T, typename ... Args>
+template<typename T, typename ... Args>
 struct is_aggregate_constructable :
-        is_aggregate_constructable_<T, std::tuple<Args...>>{};
+        is_aggregate_constructable_<T, std::tuple<Args...>>
+{
+};
 
 // TODO: add timer?
 template<typename T, typename Mutex = std::mutex>
@@ -32,6 +38,7 @@ public:
     {}
 
     xlock(const xlock &other) = delete;
+
     xlock(xlock &&other) = delete;
 
     xlock &operator=(const xlock &other) = delete;
@@ -56,6 +63,11 @@ public:
     operator const value_type &() const
     { return refValue_; }
 
+    ~xlock()
+    {
+
+    }
+
 private:
     value_type &refValue_;
     std::unique_lock<mutex_type> uniqueLock_;
@@ -79,44 +91,51 @@ public:
             : value_(std::forward<T>(value))
     {}
 
-    synchronized_value(const synchronized_value&) = delete;
-    synchronized_value& operator=(const synchronized_value&) = delete;
-    synchronized_value& operator=(synchronized_value&&) = delete;
+    synchronized_value(synchronized_value &&other)
+            : value_(std::move(other.value_)),
+              mutex_(std::move(other.mutex_))
+    {}
+
+    synchronized_value &operator=(synchronized_value &&other)
+    {
+        value_ = std::move(other.value_);
+        mutex_ = std::move(other.mutex_);
+
+        return *this;
+    }
+
+    synchronized_value(const synchronized_value &) = delete;
+    synchronized_value &operator=(const synchronized_value &) = delete;
 
     xlock_t operator*()
-    {
-        return {value_, mutex_};
-    }
+    { return {value_, mutex_}; }
 
     cxlock_t operator*() const
-    {
-        return {value_, mutex_};
-    }
+    { return {value_, mutex_}; }
 
     xlock_t operator->()
-    {
-        return {value_, mutex_};
-    }
+    { return {value_, mutex_}; }
 
     cxlock_t operator->() const
-    {
-        return {value_, mutex_};
-    }
+    { return {value_, mutex_}; }
+
+    value_type &value()
+    { return value_; }
+
+    const value_type value() const
+    { return value_; }
 
 private:
-
-    mutable mutex_type mutex_;
     value_type value_;
-
+    mutable mutex_type mutex_;
 };
-
 
 
 // this does not work
 template<typename T, typename ... R, typename Mutex = std::mutex,
         typename =
-std::enable_if_t<std::is_constructible<T, R...>::value ||
-                 is_aggregate_constructable<T, R...>()>>
+        std::enable_if_t<std::is_constructible<T, R...>::value ||
+                         is_aggregate_constructable<T, R...>()>>
 synchronized_value<T, Mutex> make_synch_value(R &&... args)
 {
     return {T(std::forward<R>(args)...)};
